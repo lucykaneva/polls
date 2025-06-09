@@ -9,7 +9,7 @@ import (
 
 func main() {
 	router := gin.Default()
-	router.GET("/polls", handlers.GetAllPolls)
+	router.GET("/polls", handlers.GetAllPolls)  
 	router.GET("/polls/:id", handlers.GetAPollByID)
 	router.POST("/polls", handlers.PostAPoll)
 	router.POST("/polls/:pollID/:optionID", handlers.VoteOnAPoll)
