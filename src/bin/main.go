@@ -13,9 +13,7 @@ func main() {
 	router.GET("/polls/:id", handlers.GetAPollByID)
 	router.POST("/polls", handlers.PostAPoll)
 	router.POST("/polls/:pollID/:optionID", handlers.VoteOnAPoll)
-	//router.PATCH("/polls", handlers.EditAPoll)
 	router.DELETE("/polls/:id", handlers.DeleteAPollByID)
-	//router.PATCH("/polls/:id", handlers.CloseVote)
 	router.PATCH("/polls/:id", handlers.ModifyAPollByID)
 
 	if err := router.Run("localhost:8080"); err != nil {

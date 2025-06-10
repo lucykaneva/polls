@@ -10,11 +10,13 @@ func GetAllPolls() *[]Poll {
 	return &polls
 }
 
-// func EditAPollByID (id int, newPoll Poll){
-// 	if (newPoll.Question == ""){
-// 		newPoll.Question =
-// 	}
-// }
+func (p *Poll) EditAPollByID(newPoll Poll) {
+	if newPoll.Question != "" {
+		p.Question = newPoll.Question
+	}
+	p.AnswerOptions = newPoll.AnswerOptions
+	p.IsClosed = newPoll.IsClosed
+}
 
 func AddAPoll(p Poll) {
 	polls = append(polls, p)

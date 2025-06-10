@@ -13,19 +13,6 @@ func GetAllPolls(c *gin.Context) {
 	c.JSON(http.StatusOK, models.GetAllPolls())
 }
 
-func CloseVote(c *gin.Context) {
-	id := c.Param("id")
-	if id == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "id is required for request"})
-	}
-	if p, err := models.GetAPollByID(id); err == nil {
-		p.IsClosed = true
-		c.JSON(http.StatusOK, *p)
-		return
-	}
-	c.JSON(http.StatusNotFound, gin.H{"message": "poll to be closed not found"})
-}
-
 func PostAPoll(c *gin.Context) {
 	var newPoll models.Poll
 	if err := c.BindJSON(&newPoll); err != nil {
@@ -75,10 +62,12 @@ func VoteOnAPoll(c *gin.Context) {
 	c.JSON(http.StatusOK, *p)
 }
 
+// I removed the two functions for closing vote and editing and just united them in this new ModifyAPollByID on the single endpoint PATCH /polls/:id
 func ModifyAPollByID(c *gin.Context) {
 	idPoll := c.Param("id")
+
 	var newUpdatedPoll models.Poll
-	newUpdatedPoll.ID = idPoll
+
 	if err := c.BindJSON(&newUpdatedPoll); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, error in binding??"})
 		return
@@ -87,35 +76,21 @@ func ModifyAPollByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, invalid id??"})
 		return
 	}
-	if models.IsThereADuplicateAnswerForAPoll(newUpdatedPoll) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "there is a duplication in answers"})
-		return
-	}
-	p, _ := models.GetAPollByID(idPoll)
-	*p = newUpdatedPoll
-	c.JSON(http.StatusCreated, *p)
-}
-
-func EditAPoll(c *gin.Context) {
-	var newUpdatedPoll models.Poll
-	if err := c.BindJSON(&newUpdatedPoll); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, error in binding??"})
-		return
-	}
-	if _, err := models.GetAPollByID(newUpdatedPoll.ID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, invalid id??"})
-		return
-	}
 	if models.IsThereADuplicateQuestion(newUpdatedPoll.Question) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's question is duplicated"})
 		return
 	}
 	if models.IsThereADuplicateAnswerForAPoll(newUpdatedPoll) {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's answer is duplicated"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "there is a duplication in answers"})
 		return
 	}
-	p, _ := models.GetAPollByID(newUpdatedPoll.ID)
-	*p = newUpdatedPoll
+	//setting new ids for the answer options and the setting the votes to 0
+	for i := 0; i < len(newUpdatedPoll.AnswerOptions); i++ {
+		newUpdatedPoll.AnswerOptions[i].ID = uuid.NewString()
+		newUpdatedPoll.AnswerOptions[i].Votes = 0
+	}
+	p, _ := models.GetAPollByID(idPoll)
+	p.EditAPollByID(newUpdatedPoll)
 	c.JSON(http.StatusCreated, *p)
 }
 
