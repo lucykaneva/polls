@@ -1,30 +1,29 @@
 package handlers
 
 import (
-	"errors"
 	"log"
 	"net/http"
 	models "polls/src/pckg/models"
-	"slices"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
-var polls []models.Poll
-
 func GetAllPolls(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, polls)
+	c.JSON(http.StatusOK, models.GetAllPolls())
 }
 
 func CloseVote(c *gin.Context) {
 	id := c.Param("id")
-	if p, err := getAPollByID(id); err == nil {
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "id is required for request"})
+	}
+	if p, err := models.GetAPollByID(id); err == nil {
 		p.IsClosed = true
-		c.IndentedJSON(http.StatusOK, *p)
+		c.JSON(http.StatusOK, *p)
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "poll to be closed not found"})
+	c.JSON(http.StatusNotFound, gin.H{"message": "poll to be closed not found"})
 }
 
 func PostAPoll(c *gin.Context) {
@@ -33,81 +32,98 @@ func PostAPoll(c *gin.Context) {
 		log.Print("Fail to decode")
 		return
 	}
+	if models.IsThereADuplicateQuestion(newPoll.Question) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's question is duplicated"})
+		return
+	}
+	if models.IsThereADuplicateAnswerForAPoll(newPoll) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's answer is duplicated"})
+		return
+	}
 	newPoll.ID = uuid.New().String()
 	newPoll.IsClosed = false
 	for i := 0; i < len(newPoll.AnswerOptions); i++ {
 		newPoll.AnswerOptions[i].ID = uuid.New().String()
 	}
-	polls = append(polls, newPoll)
-	c.IndentedJSON(http.StatusCreated, newPoll)
+	models.AddAPoll(newPoll)
+	c.JSON(http.StatusCreated, newPoll)
 }
 
 func GetAPollByID(c *gin.Context) {
 	id := c.Param("id")
-	if p, err := getAPollByID(id); err == nil {
-		c.IndentedJSON(http.StatusOK, *p)
+	if p, err := models.GetAPollByID(id); err == nil {
+		c.JSON(http.StatusOK, *p)
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "poll not found"})
+	c.JSON(http.StatusNotFound, gin.H{"message": "poll not found"})
 }
 
 func VoteOnAPoll(c *gin.Context) {
 	idPoll := c.Param("pollID")
 	idOption := c.Param("optionID")
-	if p,err:=getAPollByID(idPoll); p.IsClosed == true && err==nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "closed vote"})
+	if p, err := models.GetAPollByID(idPoll); p.IsClosed && err == nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "closed vote"})
 		return
 	}
-	if o, err := getAnOptionByIDs(idPoll, idOption); err == nil {
-		o.Votes++
-		p, _ := getAPollByID(idPoll)
-		c.IndentedJSON(http.StatusOK, *p)
+	if _, err := models.GetAnOptionByIDs(idPoll, idOption); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"message": "invalid id for options or for the poll"})
 		return
 	}
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "invalid id for options or for the poll"})
+	o, _ := models.GetAnOptionByIDs(idPoll, idOption)
+	o.Votes++
+	p, _ := models.GetAPollByID(idPoll)
+	c.JSON(http.StatusOK, *p)
+}
+
+func ModifyAPollByID(c *gin.Context) {
+	idPoll := c.Param("id")
+	var newUpdatedPoll models.Poll
+	newUpdatedPoll.ID = idPoll
+	if err := c.BindJSON(&newUpdatedPoll); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, error in binding??"})
+		return
+	}
+	if _, err := models.GetAPollByID(idPoll); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, invalid id??"})
+		return
+	}
+	if models.IsThereADuplicateAnswerForAPoll(newUpdatedPoll) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "there is a duplication in answers"})
+		return
+	}
+	p, _ := models.GetAPollByID(idPoll)
+	*p = newUpdatedPoll
+	c.JSON(http.StatusCreated, *p)
 }
 
 func EditAPoll(c *gin.Context) {
 	var newUpdatedPoll models.Poll
 	if err := c.BindJSON(&newUpdatedPoll); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, error in binding??"})
 		return
 	}
-	if p, err := getAPollByID(newUpdatedPoll.ID); err == nil {
-		*p = newUpdatedPoll
-		c.IndentedJSON(http.StatusCreated, *p)
+	if _, err := models.GetAPollByID(newUpdatedPoll.ID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, invalid id??"})
 		return
 	}
-	c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "update is unsuccessful, invalid id??"})
+	if models.IsThereADuplicateQuestion(newUpdatedPoll.Question) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's question is duplicated"})
+		return
+	}
+	if models.IsThereADuplicateAnswerForAPoll(newUpdatedPoll) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "poll's answer is duplicated"})
+		return
+	}
+	p, _ := models.GetAPollByID(newUpdatedPoll.ID)
+	*p = newUpdatedPoll
+	c.JSON(http.StatusCreated, *p)
 }
 
 func DeleteAPollByID(c *gin.Context) {
 	id := c.Param("id")
-	for i := 0; i < len(polls); i++ {
-		if polls[i].ID == id {
-			polls = slices.Delete(polls, i, i+1)
-			c.IndentedJSON(http.StatusCreated, polls)
-			return
-		}
+	if !models.DeleteAPollByID(id) {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "delete is unsuccessful, invalid id??"})
+		return
 	}
-	c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "delete is unsuccessful, invalid id??"})
-}
-
-func getAPollByID(id string) (*models.Poll, error) {
-	for i := 0; i < len(polls); i++ {
-		if polls[i].ID == id {
-			return &polls[i], nil
-		}
-	}
-	return nil, errors.New("poll not found")
-}
-func getAnOptionByIDs(idPoll string, idOption string) (*models.Option, error) {
-	if p, err := getAPollByID(idPoll); err == nil {
-		for i := 0; i < len(p.AnswerOptions); i++ {
-			if p.AnswerOptions[i].ID == idOption {
-				return &p.AnswerOptions[i], nil
-			}
-		}
-	}
-
-	return nil, errors.New("option not found")
+	c.JSON(http.StatusOK, models.GetAllPolls())
 }
