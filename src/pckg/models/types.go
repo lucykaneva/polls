@@ -1,14 +1,23 @@
 package models
 
+import (
+	"go.mongodb.org/mongo-driver/bson/primitive"
+)
+
 type Poll struct {
-	ID            string   `json:"id"`
-	Question      string   `json:"question"`
-	AnswerOptions []Option `json:"options"` 
-	IsClosed bool `json:"closed"` 
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Question      string             `bson:"question" json:"question"`
+	AnswerOptions []Option           `bson:"options" json:"options"`
+	IsClosed      bool               `bson:"closed" json:"closed"`
 }
 
 type Option struct {
-	ID      string `json:"id"`
-	Content string `json:"content"`
-	Votes   int    `json:"votes"`
+	ID      primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Content string             `bson:"content" json:"content"`
+	Votes   []Vote             `bson:"votes" json:"votes"`
+}
+
+type Vote struct {
+	ID     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	UserID string             `bson:"userId" json:"userId"`
 }
