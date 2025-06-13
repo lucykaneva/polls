@@ -2,18 +2,23 @@ package models
 
 import (
 	"errors"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func GetAPollByID(id string) (*Poll, error) {
-	polls := GetAllPolls()
-	for i := 0; i < len(*polls); i++ {
-		if (*polls)[i].ID == id {
-			return &(*polls)[i], nil
+func GetAPollByID(id primitive.ObjectID) (Poll, error) {
+	polls, err := GetAllPolls()
+	if err != nil {
+
+	}
+	for i := 0; i < len(polls); i++ {
+		if (polls)[i].ID == id {
+			return (polls)[i], nil
 		}
 	}
-	return nil, errors.New("poll not found")
+	return Poll{}, errors.New("poll not found")
 }
-func GetAnOptionByIDs(idPoll string, idOption string) (*Option, error) {
+func GetAnOptionByIDs(idPoll primitive.ObjectID, idOption primitive.ObjectID) (*Option, error) {
 	if p, err := GetAPollByID(idPoll); err == nil {
 		for i := 0; i < len(p.AnswerOptions); i++ {
 			if p.AnswerOptions[i].ID == idOption {
@@ -25,8 +30,8 @@ func GetAnOptionByIDs(idPoll string, idOption string) (*Option, error) {
 	return nil, errors.New("option not found")
 }
 func IsThereADuplicateQuestion(question string) bool {
-	polls := GetAllPolls()
-	for _, p := range *polls {
+	polls, _ := GetAllPolls()
+	for _, p := range polls {
 		if p.Question == question {
 			return true
 		}
