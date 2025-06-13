@@ -6,6 +6,7 @@ import (
 
 type Poll struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	CreatedUserID primitive.ObjectID `bson:"userID,omitempty" json:"userID,omitempty"`
 	Question      string             `bson:"question" json:"question"`
 	AnswerOptions []Option           `bson:"options" json:"options"`
 	IsClosed      bool               `bson:"closed" json:"closed"`
@@ -19,5 +20,11 @@ type Option struct {
 
 type Vote struct {
 	ID     primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	UserID string             `bson:"userId" json:"userId"`
+	UserID primitive.ObjectID `bson:"userId" json:"userId"`
+}
+
+type User struct {
+	ID       primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+	Username string             `bson:"username" json:"username"`
+	Password string             `bson:"password" json:"password"`
 }

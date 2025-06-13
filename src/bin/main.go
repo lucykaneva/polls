@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	auth "polls/src/pckg/auth"
 	"polls/src/pckg/db"
 	handlers "polls/src/pckg/handlers"
 	"time"
@@ -25,12 +26,17 @@ func main() {
 	// models.InitCollection(collection)
 
 	router := gin.Default()
-	router.GET("/polls", handlers.GetAllPolls)
-	// router.GET("/polls/:id", handlers.GetAPollByID)
-	router.POST("/polls", handlers.PostAPoll)
-	// router.POST("/polls/:pollID/:optionID", handlers.VoteOnAPoll)
-	// router.DELETE("/polls/:id", handlers.DeleteAPollByID)
-	// router.PATCH("/polls/:id", handlers.ModifyAPollByID)
+
+	router.POST("/signup", handlers.SignUp)
+	router.POST("/login", handlers.LogIn)
+	router.POST("/logout", handlers.LogOut)
+
+	router.GET("/polls", auth.UserMiddleware(), handlers.GetAllPolls)
+	router.GET("/polls/:id", auth.UserMiddleware(), handlers.GetAPollByID)
+	router.POST("/polls", auth.UserMiddleware(), handlers.PostAPoll)
+	router.POST("/polls/:pollID/:optionID", auth.UserMiddleware(), handlers.VoteOnAPoll)
+	router.DELETE("/polls/:id", auth.UserMiddleware(), handlers.DeleteAPollByID)
+	router.PATCH("/polls/:id", auth.UserMiddleware(), handlers.ModifyAPollByID)
 
 	if err := router.Run("localhost:8080"); err != nil {
 		log.Printf("Eroor running sercer: %v", err)
